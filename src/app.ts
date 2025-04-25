@@ -1,3 +1,5 @@
+import logger from "./util/logger";
+
 // ---------- Order.ts ----------
 export interface Order {
     id: number;
@@ -22,6 +24,7 @@ export class Validator implements IValidator {
             throw new Error("Item name is required.");
         }
         if (order.price <= 0) {
+            logger.error("Price must be greater than 0.");
             throw new Error("Price must be greater than 0.");
         }
     }
@@ -38,6 +41,7 @@ class ItemValidator implements IValidator {
 class PriceValidator implements IValidator {
     validate(order: Order): void {
         if (order.price <= 0) {
+            
             throw new Error("Invalid price.");
         }
     }
@@ -81,7 +85,9 @@ export class FinanceCalculator implements ICalculator {
 export class OrderManagment {
     private orders: Order[] = [];
 
-    constructor(private validator: IValidator, private calculator: ICalculator) {}
+    constructor(private validator: IValidator, private calculator: ICalculator) {
+        logger.debug("OrderManagment instance created.");
+    }
 
     getOrders() {
         return this.orders;
@@ -97,7 +103,11 @@ export class OrderManagment {
     }
 
     getOrder(id: number) {
-        return this.getOrders().find(order => order.id === id);
+        const order = this.orders.find(order => order.id === id);
+        if (!order) {
+         logger.warn(`Order with ID ${id} not found.`);   
+        }
+        return order;
     }
 
     getTotalRevenue() {

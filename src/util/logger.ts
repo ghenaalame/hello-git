@@ -1,53 +1,67 @@
 
-import winston from "winston";
-import config from "../config";
+import fs from 'fs';
+import path from 'path';
+import winston from 'winston';
+import config from '../config';
 
+// Destructure needed config values
+const { isDev, logDir } = config;
 
+// Ensure the log directory exists
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir);
+}
 
-const {logDir,isDev} = config;  
-
-const logFileFormat = winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json(),
-    winston.format.splat(),
-    winston.format.errors({ stack: true }),
-
-)
-
-const logConsoleFormat = winston.format.combine(
-    winston.format.colorize(),
-    winston.format.timestamp({ format: "HH:mm:ss" }),
-    winston.format.errors({ stack: true }),
-    winston.format.splat(),
-    winston.format.printf(({ timestamp, level, message, stack }) => {
-        // Check if the message is an object and serialize it
-        if (typeof message === 'object') {
-            message = JSON.stringify(message, null, 2); // Pretty-print object
-        }
-        return `[${timestamp}] ${level}: ${message} ${stack || ""}`;
-    })
+// Define file log format
+const fileLogFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.splat(),
+  winston.format.errors({ stack: true }),
+  winston.format.json()
 );
 
+// Define console log format (more readable with colors)
+const consoleLogFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.timestamp({ format: 'HH:mm:ss' }),
+  winston.format.splat(),
+  winston.format.printf(({ timestamp, level, message, stack }) => {
+    return stack
+      ? `[${timestamp}] ${level}: ${message}\n${stack}`
+      : `[${timestamp}] ${level}: ${message}`;
+  })
+);
 
-
-
+// Create Winston logger instance
 const logger = winston.createLogger({
-    level:"info",
-    transports:[
-        new winston.transports.File({ filename: "error.log",dirname:logDir, level: "error" , format: logFileFormat}),
-        new winston.transports.File({ filename: "all.log" ,dirname :logDir,format: logFileFormat}),
-    ],
-
-    exceptionHandlers: [
-        new winston.transports.File({ filename: "exceptions.log",dirname:logDir })
-    ]
-
+  level: isDev ? 'debug' : 'info',
+  format: fileLogFormat,
+  transports: [
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      dirname: logDir,
+      level: 'error',
+      format: fileLogFormat,
+    }),
+    new winston.transports.File({
+      filename: 'logs/all.log',
+      dirname: logDir,
+      format: fileLogFormat,
+    }),
+  ],
+  exceptionHandlers: [
+    new winston.transports.File({
+      filename: 'logs/exceptions.log',
+      dirname: logDir,
+    }),
+  ],
 });
 
+// If in development, also log to the console
 if (isDev) {
-    logger.add(new winston.transports.Console({
-        format: logConsoleFormat,
-    }));
-    logger.level = "debug";
+  logger.add(new winston.transports.Console({
+    format: consoleLogFormat,
+  }));
 }
+
 export default logger;

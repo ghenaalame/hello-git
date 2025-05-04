@@ -3,5 +3,5 @@ export interface item {
 }
 
 export enum ItemCatagory {
-    Cake,
+    Cake,Toy,Book, 
 }
